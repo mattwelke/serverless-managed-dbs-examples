@@ -10,7 +10,6 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.18.0",
-    "body-parser": "^1.18.3",
     "express": "^4.16.4",
     "pg": "^7.7.1",
     "pg-connection-string": "^2.0.0",
