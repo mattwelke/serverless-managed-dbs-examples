@@ -7,8 +7,8 @@ const pg = require('pg');
 const axios = require('axios');
 const parsePgConnStr = require('pg-connection-string').parse;
 
-const herokuApiKey = '59e05537-4b95-4818-aa86-63f07939fd9c';
-const herokuPostgresId = 'postgresql-slippery-72122';
+const herokuApiKey = 'd261eecb-9962-4263-bb78-8715ee0ff087';
+const herokuPostgresId = 'postgresql-acute-28210';
 const herokuClient = axios.create({
     baseURL: 'https://api.heroku.com/',
     headers: {
@@ -17,6 +17,7 @@ const herokuClient = axios.create({
     },
 });
 
+let pgConfig;
 let pgPool;
 
 const app = express();
@@ -27,7 +28,7 @@ const createConn = async () => {
     const credsResponse = await herokuClient.get(`addons/${herokuPostgresId}/config`);
     const pgConnStr = credsResponse.data[0]['value'];
 
-    const pgConfig = {
+    pgConfig = {
         ...parsePgConnStr(pgConnStr), ...{
             max: 1,
             ssl: true,
@@ -46,6 +47,7 @@ const performQuery = async () => {
 
 app.get('/hello', async function (req, res) {
     if (!pgPool) {
+        // Cold start. Get Heroku Postgres creds and create pool.
         await createConn();
     } else {
         console.log('Using existing PG connection.');
@@ -55,26 +57,26 @@ app.get('/hello', async function (req, res) {
         const result = await performQuery();
 
         res.json({
-            result: `Hello, World! According to PostgreSQL, the time is: ${result.rows[0].now}`,
+            result: `According to PostgreSQL, the time is: ${result.rows[0].now}`,
+            pgConfigUsed: pgConfig,
         });
         return;
     } catch (e) {
-        if (e.routine !== undefined && e.routine === 'auth_failed') {
-            // known possible 1st failure... refresh creds and try again
-            await createConn();
-            const result = await performQuery();
-
-            res.json({
-                result: `Hello, World! According to PostgreSQL, the time is: ${result.rows[0].now}`,
-            });
-            return;
-        } else {
-            res.json({
-                error: e.message,
-            });
-            return;
-        }
+        res.json({
+            error: e.message,
+        });
+        return;
     }
+
+});
+
+app.post('/onrelease', async function (req, res) {
+    // Get Heroku Postgres creds and replace pool with new one.
+    await createConn();
+
+    // Response with 2xx response so Heroku knows webhook was successful.
+    // Response body doesn't matter.
+    res.status(204).send();
 });
 
 module.exports = {
