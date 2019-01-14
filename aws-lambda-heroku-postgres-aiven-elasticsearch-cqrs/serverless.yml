@@ -1,0 +1,15 @@
+service: aws-lambda-heroku-postgres-aiven-elasticsearch-cqrs # NOTE: update this with your service name
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: dev
+  region: ca-central-1
+
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - http: POST onrelease
+      - http: POST posts
+      - http: GET posts
