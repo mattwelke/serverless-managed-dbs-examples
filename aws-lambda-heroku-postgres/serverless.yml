@@ -1,13 +1,9 @@
-service: my-service # NOTE: update this with your service name
-
+service: my-service
 provider:
   name: aws
-  runtime: nodejs8.10
-  stage: dev
-
+  runtime: nodejs10.x
 functions:
   hello:
     handler: handler.hello
     events:
-      - http: GET hello
-      - http: POST onrelease
+    - http: GET hello

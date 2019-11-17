@@ -1,85 +1,69 @@
-// handler.js
 'use strict';
 
-const express = require('express');
-const serverless = require('serverless-http');
 const pg = require('pg');
+
 const axios = require('axios');
 const parsePgConnStr = require('pg-connection-string').parse;
 
-const herokuApiKey = 'd261eecb-9962-4263-bb78-8715ee0ff087';
-const herokuPostgresId = 'postgresql-acute-28210';
-const herokuClient = axios.create({
-    baseURL: 'https://api.heroku.com/',
-    headers: {
-        'Authorization': `Bearer ${herokuApiKey}`,
-        'Accept': 'application/vnd.heroku+json; version=3',
-    },
+// Heroku API key hard-coded for easy development.
+// INSECURE - CHANGE FOR PROD
+const herokuApiKey = 'REDACTED';
+const herokuPostgresId = 'postgresql-silhouetted-50650';
+const herokuApi = axios.create({
+  baseURL: 'https://api.heroku.com/',
+  headers: {
+    'Authorization': `Bearer ${herokuApiKey}`,
+    'Accept': 'application/vnd.heroku+json; version=3',
+  },
 });
 
-let pgConfig;
+// Pool will be reused for each invocation of the backing container.
 let pgPool;
 
-const app = express();
+const setupPgPool = async () => {
+  const herokuRes = await herokuApi.get(`addons/${herokuPostgresId}/config`);
+  const pgConnStr = herokuRes.data[0].value;
 
-const createConn = async () => {
-    console.log('Creating PG connection.');
+  // Use connection string from Heroku API response as a base. Overwrite "max"
+  // and "ssl".
+  const pgConfig = {
+    ...parsePgConnStr(pgConnStr),
+    ...{
+      max: 1,
+      ssl: true,
+    },
+  };
 
-    const credsResponse = await herokuClient.get(`addons/${herokuPostgresId}/config`);
-    const pgConnStr = credsResponse.data[0]['value'];
+  pgPool = new pg.Pool(pgConfig);
+};
 
-    pgConfig = {
-        ...parsePgConnStr(pgConnStr), ...{
-            max: 1,
-            ssl: true,
+module.exports.hello = async () => {
+  if (!pgPool) {
+    // "Cold start". Get Heroku Postgres creds and create connection pool.
+    await setupPgPool();
+  }
+  // Else, backing container "warm". Use existing connection pool.
+
+  try {
+    const result = await pgPool.query('SELECT now()');
+
+    // Response body must be JSON.
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        output: {
+          currTimePg: result.rows[0].now,
         },
+      }),
     };
-
-    pgPool = new pg.Pool(pgConfig);
-};
-
-const performQuery = async () => {
-    const client = await pgPool.connect();
-    const result = await client.query('SELECT now()');
-    client.release();
-    return result;
-};
-
-app.get('/hello', async function (req, res) {
-    if (!pgPool) {
-        // Cold start. Get Heroku Postgres creds and create pool.
-        await createConn();
-    } else {
-        console.log('Using existing PG connection.');
-    }
-
-    try {
-        const result = await performQuery();
-
-        res.json({
-            result: `According to PostgreSQL, the time is: ${result.rows[0].now}`,
-            pgConfigUsed: pgConfig,
-        });
-        return;
-    } catch (e) {
-        res.json({
-            error: e.message,
-        });
-        return;
-    }
-
-});
-
-app.post('/onrelease', async function (req, res) {
-    // Get Heroku Postgres creds and replace pool with new one.
-    await createConn();
-
-    // Response with 2xx response so Heroku knows webhook was successful.
-    // Response body doesn't matter.
-    res.status(204).send();
-});
-
-module.exports = {
-    app,
-    hello: serverless(app),
+  } catch (e) {
+    // Return error message in response body for easy debugging.
+    // INSECURE - CHANGE FOR PROD
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: e.message,
+      }),
+    };
+  }
 };
