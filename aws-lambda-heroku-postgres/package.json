@@ -10,7 +10,7 @@
   "license": "UNLICENSE",
   "dependencies": {
     "axios": "^0.19.0",
-    "pg": "^7.12.1",
+    "pg": "^8.6.0",
     "pg-connection-string": "^2.1.0"
   }
 }
