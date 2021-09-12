@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.16.4",
-    "faker": "^5.4.0",
+    "faker": "^5.5.3",
     "mongodb": "^3.6.6",
     "serverless-http": "^2.2.0"
   }
