@@ -13,6 +13,6 @@
     "@faker-js/faker": "^7.5.0",
     "express": "^4.16.4",
     "mongodb": "^4.9.1",
-    "serverless-http": "^2.2.0"
+    "serverless-http": "^3.0.2"
   }
 }
