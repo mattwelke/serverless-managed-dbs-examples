@@ -4,7 +4,7 @@
 const express = require('express');
 const serverless = require('serverless-http');
 const MongoClient = require('mongodb').MongoClient;
-const faker = require('faker');
+const faker = require('@faker-js/faker');
 
 const mongoUser = 'sls-mongo-example';
 const mongoDbName = 'test';
