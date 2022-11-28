@@ -9,7 +9,7 @@
   "author": "",
   "license": "UNLICENSE",
   "dependencies": {
-    "axios": "^0.27.2",
+    "axios": "^1.2.0",
     "pg": "^8.8.0",
     "pg-connection-string": "^2.5.0"
   }
